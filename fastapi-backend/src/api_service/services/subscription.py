@@ -1,9 +1,12 @@
 """Subscription business logic and todo limit checking."""
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
+from datetime import datetime
 
 from ..models.user import User
 from ..models.todo import Todo
+from . import stripe_service
 
 
 async def get_user_todo_count(user_id: int, db: AsyncSession) -> int:
@@ -81,6 +84,27 @@ async def get_subscription_info(user: User, db: AsyncSession, free_tier_limit: i
     todo_count = await get_user_todo_count(user.id, db)
     can_create = await check_todo_limit(user, db, free_tier_limit)
 
+    # Initialize billing info
+    monthly_amount: Optional[int] = None
+    next_billing_date: Optional[datetime] = None
+
+    # Fetch billing info from Stripe for premium users
+    if user.subscription_tier == "premium" and user.stripe_subscription_id:
+        try:
+            subscription = stripe_service.get_subscription(user.stripe_subscription_id)
+
+            # Get the amount from the subscription
+            if subscription.items and subscription.items.data:
+                price = subscription.items.data[0].price
+                monthly_amount = price.unit_amount  # Amount in cents
+
+            # Get next billing date from current_period_end
+            if subscription.current_period_end:
+                next_billing_date = datetime.fromtimestamp(subscription.current_period_end)
+        except Exception as e:
+            # Log error but don't fail the entire request
+            print(f"Error fetching Stripe subscription details: {e}")
+
     return {
         "subscription_status": user.subscription_status,
         "subscription_tier": user.subscription_tier,
@@ -91,4 +115,6 @@ async def get_subscription_info(user: User, db: AsyncSession, free_tier_limit: i
         "stripe_subscription_id": user.stripe_subscription_id,
         "subscription_start_date": user.subscription_start_date,
         "subscription_end_date": user.subscription_end_date,
+        "monthly_amount": monthly_amount,
+        "next_billing_date": next_billing_date,
     }

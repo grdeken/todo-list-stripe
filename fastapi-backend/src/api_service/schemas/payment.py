@@ -41,6 +41,12 @@ class SubscriptionStatus(BaseModel):
     stripe_subscription_id: Optional[str] = Field(default=None)
     subscription_start_date: Optional[datetime] = Field(default=None)
     subscription_end_date: Optional[datetime] = Field(default=None)
+    monthly_amount: Optional[int] = Field(
+        default=None, description="Monthly subscription amount in cents"
+    )
+    next_billing_date: Optional[datetime] = Field(
+        default=None, description="Next billing date for the subscription"
+    )
 
 
 class PaymentIntentResponse(BaseModel):

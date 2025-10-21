@@ -48,6 +48,22 @@ export const api = {
     return { ok: response.ok };
   },
 
+  async changePassword(currentPassword, newPassword) {
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Failed to change password');
+    }
+    return data;
+  },
+
   // TodoLists
   async getTodoLists() {
     const response = await fetch(`${API_BASE_URL}/todo-lists/`, {
@@ -174,6 +190,18 @@ export const api = {
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Failed to get customer portal');
+    }
+    return data;
+  },
+
+  async verifyCheckoutSession(sessionId) {
+    const response = await fetch(`${API_BASE_URL}/subscription/verify-session/${sessionId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Failed to verify checkout session');
     }
     return data;
   },

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import SubscriptionBadge from './SubscriptionBadge';
 import UpgradeButton from './UpgradeButton';
 
-function Navigation({ user, subscription, onLogout, onUpgrade }) {
+function Navigation({ user, subscription, onLogout, onUpgrade, onShowSettings }) {
   const showUpgradeButton = subscription?.subscription_tier === 'free' &&
                            subscription?.todo_count >= subscription?.todo_limit;
 
@@ -25,7 +25,9 @@ function Navigation({ user, subscription, onLogout, onUpgrade }) {
           )}
 
           <div className="user-info">
-            <span className="username">{user?.username || user?.email}</span>
+            <button onClick={onShowSettings} className="username-btn">
+              {user?.username || user?.email}
+            </button>
             <button onClick={onLogout} className="btn-logout">
               Logout
             </button>

@@ -9,12 +9,13 @@ from .todo import (
     TodoToggleResponse,
     TodoUpdate,
 )
-from .user import TokenResponse, UserCreate, UserLogin, UserResponse, UserUpdate
+from .user import PasswordChange, TokenResponse, UserCreate, UserLogin, UserResponse, UserUpdate
 
 __all__ = [
     "UserCreate",
     "UserLogin",
     "UserUpdate",
+    "PasswordChange",
     "UserResponse",
     "TokenResponse",
     "TodoListCreate",

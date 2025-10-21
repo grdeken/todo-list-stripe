@@ -3,6 +3,8 @@ import Login from './components/Login';
 import TodoList from './components/TodoList';
 import Navigation from './components/Navigation';
 import UpgradeModal from './components/UpgradeModal';
+import Settings from './components/Settings';
+import PremiumWelcomeModal from './components/PremiumWelcomeModal';
 import { api } from './api';
 import './App.css';
 
@@ -12,6 +14,8 @@ function App() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -21,6 +25,9 @@ function App() {
       setUser(JSON.parse(savedUser));
       loadTodoList();
       loadSubscription();
+
+      // Check for Stripe checkout success
+      handleStripeRedirect();
     } else {
       setLoading(false);
     }
@@ -103,6 +110,42 @@ function App() {
     setShowUpgradeModal(true);
   };
 
+  const handleShowSettings = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  };
+
+  const handleStripeRedirect = async () => {
+    // Check for session_id in URL (from Stripe redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+      try {
+        // Verify the session with backend
+        await api.verifyCheckoutSession(sessionId);
+
+        // Reload subscription status
+        await loadSubscription();
+
+        // Show premium welcome modal
+        setShowPremiumWelcome(true);
+
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        console.error('Error verifying checkout session:', error);
+      }
+    }
+  };
+
+  const handleClosePremiumWelcome = () => {
+    setShowPremiumWelcome(false);
+  };
+
   if (loading) {
     return (
       <div className="app">
@@ -115,6 +158,13 @@ function App() {
     <div className="app">
       {!user ? (
         <Login onLogin={handleLogin} />
+      ) : showSettings ? (
+        <Settings
+          user={user}
+          subscription={subscription}
+          onBack={handleCloseSettings}
+          onUpdateUser={setUser}
+        />
       ) : (
         <>
           <Navigation
@@ -122,6 +172,7 @@ function App() {
             subscription={subscription}
             onLogout={handleLogout}
             onUpgrade={handleShowUpgradeModal}
+            onShowSettings={handleShowSettings}
           />
           <TodoList
             todoList={todoList}
@@ -135,6 +186,10 @@ function App() {
             onClose={handleCloseUpgradeModal}
             onUpgrade={handleUpgrade}
             subscription={subscription}
+          />
+          <PremiumWelcomeModal
+            isOpen={showPremiumWelcome}
+            onClose={handleClosePremiumWelcome}
           />
         </>
       )}

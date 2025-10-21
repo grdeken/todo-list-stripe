@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.config import settings
 from ....core.security import create_access_token, get_password_hash, verify_password
 from ....models import User
-from ....schemas import TokenResponse, UserCreate, UserLogin, UserResponse
+from ....schemas import PasswordChange, TokenResponse, UserCreate, UserLogin, UserResponse
 from ...deps import CurrentUser, DatabaseSession
 
 router = APIRouter()
@@ -192,3 +192,37 @@ async def logout(current_user: CurrentUser) -> dict[str, str]:
         Success message
     """
     return {"message": "Successfully logged out"}
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    password_data: PasswordChange,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> dict[str, str]:
+    """
+    Change the current user's password.
+
+    Args:
+        password_data: Password change data
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If current password is incorrect
+    """
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    # Update password
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    await db.commit()
+
+    return {"message": "Password changed successfully"}

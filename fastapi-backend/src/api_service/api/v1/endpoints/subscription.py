@@ -193,6 +193,82 @@ async def get_customer_portal(
         )
 
 
+@router.post("/verify-session/{session_id}")
+async def verify_checkout_session(
+    session_id: str,
+    db: DatabaseSession,
+    current_user: CurrentUser,
+) -> dict:
+    """
+    Verify a Stripe checkout session and update user subscription status.
+
+    This endpoint is called after a successful Stripe checkout to ensure
+    the user's subscription is properly updated in the database.
+
+    Args:
+        session_id: Stripe checkout session ID
+        db: Database session
+        current_user: Current authenticated user
+
+    Returns:
+        Verification status and subscription info
+
+    Raises:
+        HTTPException: If session verification fails or Stripe error occurs
+    """
+    try:
+        # Retrieve the checkout session from Stripe
+        session = stripe_service.retrieve_checkout_session(session_id)
+
+        # Verify the session belongs to this user
+        if session.customer != current_user.stripe_customer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Session does not belong to current user",
+            )
+
+        # Check if payment was successful
+        if session.payment_status != "paid":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment not completed",
+            )
+
+        # Get subscription from session
+        if not session.subscription:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No subscription found in session",
+            )
+
+        # Update user subscription if not already updated
+        if current_user.stripe_subscription_id != session.subscription:
+            # Retrieve subscription details
+            if isinstance(session.subscription, str):
+                subscription_obj = stripe_service.retrieve_subscription(session.subscription)
+            else:
+                subscription_obj = session.subscription
+
+            # Update user
+            current_user.stripe_subscription_id = subscription_obj.id
+            current_user.subscription_tier = "premium"
+            current_user.subscription_status = subscription_obj.status
+            await db.commit()
+
+        return {
+            "success": True,
+            "message": "Subscription verified and updated",
+            "subscription_tier": current_user.subscription_tier,
+            "subscription_status": current_user.subscription_status,
+        }
+
+    except stripe.error.StripeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Stripe error: {str(e)}",
+        )
+
+
 @router.post("/webhook", response_model=WebhookEventResponse)
 async def stripe_webhook(
     request: Request,

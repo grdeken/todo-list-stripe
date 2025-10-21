@@ -12,8 +12,8 @@ function SubscriptionBadge({ subscription, onUpgrade }) {
     >
       {isPremium ? (
         <span className="badge-content">
-          <span className="badge-icon">⭐</span>
-          <span className="badge-text">Premium</span>
+          <span className="badge-icon">✓</span>
+          <span className="badge-text">Premium User</span>
         </span>
       ) : (
         <span className="badge-content">

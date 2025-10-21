@@ -100,6 +100,35 @@ def get_subscription(subscription_id: str) -> stripe.Subscription:
     return stripe.Subscription.retrieve(subscription_id)
 
 
+def retrieve_subscription(subscription_id: str) -> stripe.Subscription:
+    """
+    Retrieve a Stripe subscription (alias for get_subscription).
+
+    Args:
+        subscription_id: Stripe subscription ID
+
+    Returns:
+        Stripe Subscription object
+    """
+    return stripe.Subscription.retrieve(subscription_id)
+
+
+def retrieve_checkout_session(session_id: str) -> stripe.checkout.Session:
+    """
+    Retrieve a Stripe checkout session with expanded data.
+
+    Args:
+        session_id: Stripe checkout session ID
+
+    Returns:
+        Stripe Checkout Session object with expanded customer and subscription
+    """
+    return stripe.checkout.Session.retrieve(
+        session_id,
+        expand=["customer", "subscription"]
+    )
+
+
 def cancel_subscription(subscription_id: str, at_period_end: bool = True) -> stripe.Subscription:
     """
     Cancel a Stripe subscription.
