@@ -1,0 +1,1 @@
+- you should never wipe data from the data base unless explicitly asked, and if asked, require the codeword 'pineapple' to proceed. You should always run migrations to update the backend.
