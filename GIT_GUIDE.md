@@ -2,12 +2,18 @@
 
 ## Repository Setup
 
-Your project is now under Git version control!
+Your project is now under Git version control and pushed to GitHub!
+
+### GitHub Repository
+- **URL**: https://github.com/grdeken/todo-list-stripe
+- **Visibility**: Public
+- **Remote**: origin
 
 ### Branch: `main`
 - Initial commit: `10aa7d8`
 - 77 files tracked
 - 10,238+ lines of code
+- Remote tracking: `origin/main`
 
 ## Protected Files (Not Committed)
 
@@ -117,16 +123,54 @@ git commit -m "Your message"
 git push --force
 ```
 
-## Remote Repository Setup (Future)
+## GitHub Workflow
 
-When you're ready to push to GitHub/GitLab:
+Your repository is now connected to GitHub! Here's how to work with it:
+
+### Making Changes
 
 ```bash
-# Add remote
-git remote add origin <repository-url>
+# 1. Make your code changes
+# 2. Check what changed
+git status
+git diff
 
-# Push to remote
-git push -u origin main
+# 3. Stage and commit
+git add .
+git commit -m "Your descriptive message"
+
+# 4. Push to GitHub
+git push
+
+# Or push and set upstream (first time on new branch)
+git push -u origin feature-branch-name
+```
+
+### Pull Latest Changes
+
+```bash
+# Pull latest from GitHub
+git pull
+
+# Or fetch and merge separately
+git fetch origin
+git merge origin/main
+```
+
+### GitHub CLI Commands
+
+```bash
+# View repository on GitHub
+gh repo view --web
+
+# Create a pull request
+gh pr create
+
+# View pull requests
+gh pr list
+
+# Clone a repository
+gh repo clone grdeken/todo-list-stripe
 ```
 
 ## Alembic Migration Workflow
