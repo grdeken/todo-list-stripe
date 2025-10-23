@@ -61,3 +61,4 @@ setup_stripe_product.py
 
 # Logs
 *.log
+.vercel
