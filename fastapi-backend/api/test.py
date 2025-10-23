@@ -1,42 +1,49 @@
-"""Vercel serverless handler for FastAPI Todo App."""
+"""Vercel serverless handler for FastAPI Todo App with Postgres."""
 from mangum import Mangum
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Create FastAPI application
+from src.api_service.core.config import settings
+from src.api_service.api.v1.router import api_router
+
+# Create FastAPI application (no lifespan for serverless)
 app = FastAPI(
-    title="FastAPI Todo List API",
-    version="0.1.0",
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://todo-list-front-end-tau.vercel.app", "http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Include API router with all routes
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/health")
-async def health_check() -> dict:
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "version": "0.1.0"
-    }
+    return {"status": "healthy", "version": settings.VERSION}
 
 
 @app.get("/")
-async def root() -> dict:
+async def root() -> dict[str, str]:
     """Root endpoint with API information."""
     return {
-        "name": "FastAPI Todo List API",
-        "version": "0.1.0",
+        "name": settings.PROJECT_NAME,
+        "version": settings.VERSION,
         "docs": "/docs",
         "health": "/health",
     }
 
 # Mangum handler for Vercel (AWS Lambda compatible)
+# lifespan="off" prevents database initialization in the handler
 handler = Mangum(app, lifespan="off")
