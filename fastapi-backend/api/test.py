@@ -1,40 +1,18 @@
 """Vercel serverless handler for FastAPI Todo App."""
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api_service.core.config import settings
 from src.api_service.api.v1.router import api_router
-from src.api_service.db import Base, engine
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """
-    Application lifespan manager for startup and shutdown events.
-
-    Creates database tables on startup for serverless environment.
-    """
-    # Startup: Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    # Shutdown: Close database connections
-    await engine.dispose()
-
-
-# Create FastAPI application
+# Create FastAPI application without lifespan for serverless
+# Database tables should be created via migrations
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan,
 )
 
 # Configure CORS
