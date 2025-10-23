@@ -1,4 +1,5 @@
 """Application configuration using Pydantic Settings."""
+import json
 from typing import Any, Optional
 
 from pydantic import PostgresDsn, field_validator
@@ -23,6 +24,24 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     CORS_ALLOW_CREDENTIALS: bool = True
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: Any) -> list[str]:
+        """Parse ALLOWED_ORIGINS from string or list."""
+        if isinstance(v, str):
+            # Try to parse as JSON first (for environment variables)
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            # If not JSON, treat as comma-separated values
+            return [origin.strip() for origin in v.split(",")]
+        if isinstance(v, list):
+            return v
+        return ["http://localhost:5173", "http://localhost:3000"]
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./todos.db"
