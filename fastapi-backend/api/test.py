@@ -1,22 +1,67 @@
-"""Simple test handler for Vercel."""
+"""Vercel serverless handler for FastAPI Todo App."""
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+from src.api_service.core.config import settings
+from src.api_service.api.v1.router import api_router
+from src.api_service.db import Base, engine
 
-# Add CORS
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """
+    Application lifespan manager for startup and shutdown events.
+
+    Creates database tables on startup for serverless environment.
+    """
+    # Startup: Create database tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield
+
+    # Shutdown: Close database connections
+    await engine.dispose()
+
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://todo-list-front-end-tau.vercel.app", "http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello from Vercel!"}
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/health")
-def health():
-    return {"status": "healthy"}
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "healthy", "version": settings.VERSION}
+
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    """Root endpoint with API information."""
+    return {
+        "name": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "docs": "/docs",
+        "health": "/health",
+    }
