@@ -2,44 +2,48 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api_service.core.config import settings
-from src.api_service.api.v1.router import api_router
+# Test: Try importing just settings first
+try:
+    from src.api_service.core.config import settings
+    settings_loaded = True
+    settings_error = None
+except Exception as e:
+    settings_loaded = False
+    settings_error = str(e)
 
-# Create FastAPI application without lifespan for serverless
-# Database tables should be created via migrations
+# Create FastAPI application
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    title="FastAPI Todo List API",
+    version="0.1.0",
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_origins=["https://todo-list-front-end-tau.vercel.app", "http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API router
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
 
 @app.get("/health")
-async def health_check() -> dict[str, str]:
+async def health_check() -> dict:
     """Health check endpoint."""
-    return {"status": "healthy", "version": settings.VERSION}
+    return {
+        "status": "healthy",
+        "version": "0.1.0",
+        "settings_loaded": settings_loaded,
+        "settings_error": settings_error
+    }
 
 
 @app.get("/")
-async def root() -> dict[str, str]:
+async def root() -> dict:
     """Root endpoint with API information."""
     return {
-        "name": settings.PROJECT_NAME,
-        "version": settings.VERSION,
+        "name": "FastAPI Todo List API",
+        "version": "0.1.0",
         "docs": "/docs",
         "health": "/health",
     }
