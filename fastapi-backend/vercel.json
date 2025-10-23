@@ -11,14 +11,5 @@
       "src": "/(.*)",
       "dest": "src/api_service/main.py"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "SECRET_KEY": "@secret_key",
-    "STRIPE_SECRET_KEY": "@stripe_secret_key",
-    "STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
-    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret",
-    "STRIPE_PREMIUM_PRICE_ID": "@stripe_premium_price_id",
-    "ALLOWED_ORIGINS": "@allowed_origins"
-  }
+  ]
 }
