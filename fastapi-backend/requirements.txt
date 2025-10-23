@@ -24,6 +24,9 @@ greenlet>=3.0.0
 # Payment Processing
 stripe>=8.0.0
 
+# Serverless
+mangum>=0.17.0
+
 # Development
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
