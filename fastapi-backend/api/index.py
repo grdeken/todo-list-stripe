@@ -1,6 +1,6 @@
 """Vercel serverless function handler for FastAPI."""
-from mangum import Mangum
+# Import the FastAPI app directly - Vercel will handle it
 from src.api_service.main import app
 
-# Mangum handler for AWS Lambda/Vercel
-handler = Mangum(app, lifespan="off")
+# Export app for Vercel
+__all__ = ["app"]
