@@ -1,15 +1,7 @@
 """Vercel serverless handler for FastAPI Todo App."""
+from mangum import Mangum
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Test: Try importing just settings first
-try:
-    from src.api_service.core.config import settings
-    settings_loaded = True
-    settings_error = None
-except Exception as e:
-    settings_loaded = False
-    settings_error = str(e)
 
 # Create FastAPI application
 app = FastAPI(
@@ -32,9 +24,7 @@ async def health_check() -> dict:
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "version": "0.1.0",
-        "settings_loaded": settings_loaded,
-        "settings_error": settings_error
+        "version": "0.1.0"
     }
 
 
@@ -47,3 +37,6 @@ async def root() -> dict:
         "docs": "/docs",
         "health": "/health",
     }
+
+# Mangum handler for Vercel (AWS Lambda compatible)
+handler = Mangum(app, lifespan="off")
