@@ -44,14 +44,25 @@ class Settings(BaseSettings):
         return ["http://localhost:5173", "http://localhost:3000"]
 
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./todos.db"
+    # REQUIRED: Must be set via environment variable
+    # For local development, use PostgreSQL or set in .env file
+    DATABASE_URL: str
 
-    @field_validator("DATABASE_URL", mode="before")
+    @field_validator("DATABASE_URL")
     @classmethod
-    def validate_database_url(cls, v: Optional[str]) -> str:
-        """Validate and return database URL."""
-        if v is None:
-            return "sqlite+aiosqlite:///./todos.db"
+    def validate_database_url(cls, v: str) -> str:
+        """Validate database URL is set and uses PostgreSQL."""
+        if not v:
+            raise ValueError(
+                "DATABASE_URL must be set in environment variables or .env file. "
+                "Example: postgresql+asyncpg://user:password@host:5432/dbname"
+            )
+        if not v.startswith("postgresql"):
+            raise ValueError(
+                "DATABASE_URL must use PostgreSQL. "
+                "SQLite is not supported in production. "
+                "Example: postgresql+asyncpg://user:password@host:5432/dbname"
+            )
         return v
 
     # Security

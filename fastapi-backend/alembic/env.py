@@ -26,6 +26,8 @@ from src.api_service.db.base import Base
 from src.api_service.models.user import User
 from src.api_service.models.todo import TodoList, Todo
 from src.api_service.models.payment import PaymentTransaction, SubscriptionEvent
+from src.api_service.models.oauth import OAuthAccount
+from src.api_service.core.config import settings
 
 target_metadata = Base.metadata
 
@@ -33,6 +35,16 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+def get_url():
+    """Get database URL, converting async URLs to sync for Alembic."""
+    # Always use DATABASE_URL from settings (loaded from .env)
+    url = settings.DATABASE_URL
+    # Convert asyncpg to psycopg2 for Alembic migrations
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
+    return url
 
 
 def run_migrations_offline() -> None:
@@ -47,7 +59,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -66,8 +78,12 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Override the sqlalchemy.url config with DATABASE_URL from settings
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = get_url()
+
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
