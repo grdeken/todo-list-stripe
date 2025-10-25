@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from .api.v1.router import api_router
 from .core.config import settings
@@ -35,6 +36,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+)
+
+# Add session middleware (required for OAuth state management)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    max_age=3600,  # Session expires after 1 hour
 )
 
 # Configure CORS

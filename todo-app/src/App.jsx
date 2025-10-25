@@ -18,6 +18,48 @@ function App() {
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
 
   useEffect(() => {
+    // Check for OAuth callback token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthToken = urlParams.get('token');
+
+    if (oauthToken) {
+      // Store the OAuth token
+      localStorage.setItem('access_token', oauthToken);
+
+      // Fetch user info with the new token
+      const fetchOAuthUser = async () => {
+        try {
+          // For now, we'll decode the user info from the token or fetch it
+          // Since we don't have a /me endpoint yet, we'll create a minimal user object
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${oauthToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+            await loadTodoList();
+            await loadSubscription();
+
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else {
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error('Error fetching OAuth user:', error);
+          setLoading(false);
+        }
+      };
+
+      fetchOAuthUser();
+      return;
+    }
+
     // Check if user is already logged in
     const token = localStorage.getItem('access_token');
     const savedUser = localStorage.getItem('user');

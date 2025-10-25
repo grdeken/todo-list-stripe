@@ -16,7 +16,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Optional for OAuth users
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -49,6 +49,9 @@ class User(Base):
     )
     subscription_events: Mapped[list["SubscriptionEvent"]] = relationship(
         "SubscriptionEvent", back_populates="user", cascade="all, delete-orphan"
+    )
+    oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(
+        "OAuthAccount", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

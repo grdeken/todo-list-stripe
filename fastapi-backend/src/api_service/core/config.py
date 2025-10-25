@@ -55,9 +55,25 @@ class Settings(BaseSettings):
         return v
 
     # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str  # No default - must be set via environment variable
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """Validate SECRET_KEY meets minimum security requirements."""
+        if not v or len(v) < 32:
+            raise ValueError(
+                "SECRET_KEY must be at least 32 characters long. "
+                "Generate one using: openssl rand -hex 32"
+            )
+        if v == "your-secret-key-change-in-production":
+            raise ValueError(
+                "SECRET_KEY cannot be the default value. "
+                "Generate a secure key using: openssl rand -hex 32"
+            )
+        return v
 
     # Pagination
     DEFAULT_PAGE_SIZE: int = 50
@@ -72,6 +88,19 @@ class Settings(BaseSettings):
     # Subscription Settings
     FREE_TIER_TODO_LIMIT: int = 5
     PREMIUM_MONTHLY_PRICE_CENTS: int = 999  # $9.99 in cents
+
+    # Google OAuth Configuration
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    # Scopes for Google OAuth (profile, email, and calendar for future use)
+    GOOGLE_OAUTH_SCOPES: list[str] = [
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/calendar.readonly",  # For future Calendar integration
+        "https://www.googleapis.com/auth/calendar.events",     # For future Calendar integration
+    ]
 
 
 settings = Settings()

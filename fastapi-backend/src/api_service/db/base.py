@@ -8,14 +8,19 @@ from ..core.config import settings
 
 # Create async engine
 # For Supabase/pgBouncer compatibility: disable statement caching
+# Only apply these settings for PostgreSQL
+connect_args = {}
+if settings.DATABASE_URL.startswith("postgresql"):
+    connect_args = {
+        "statement_cache_size": 0,  # Required for pgBouncer compatibility
+        "prepared_statement_cache_size": 0,
+    }
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
-    connect_args={
-        "statement_cache_size": 0,  # Required for pgBouncer compatibility
-        "prepared_statement_cache_size": 0,
-    },
+    connect_args=connect_args,
 )
 
 # Create async session factory

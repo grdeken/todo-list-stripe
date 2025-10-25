@@ -2,7 +2,7 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,17 +16,45 @@ from ...deps import CurrentUser, DatabaseSession
 router = APIRouter()
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: DatabaseSession) -> TokenResponse:
+def set_auth_cookie(response: Response, access_token: str) -> None:
+    """
+    Set authentication token in HttpOnly cookie for security.
+
+    HttpOnly cookies prevent XSS attacks by making the token inaccessible to JavaScript.
+    Secure flag ensures cookie is only sent over HTTPS in production.
+    SameSite=lax prevents CSRF attacks while allowing normal navigation.
+
+    Args:
+        response: FastAPI Response object
+        access_token: JWT access token to store
+    """
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,  # Prevents JavaScript access (XSS protection)
+        secure=not settings.DEBUG,  # HTTPS only in production
+        samesite="lax",  # CSRF protection
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert minutes to seconds
+        path="/",
+    )
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    user_data: UserCreate, response: Response, db: DatabaseSession
+) -> UserResponse:
     """
     Register a new user.
 
+    Sets JWT token in HttpOnly cookie for secure authentication.
+
     Args:
         user_data: User registration data
+        response: FastAPI response to set cookie
         db: Database session
 
     Returns:
-        Access token and user information
+        User information (token is set in HttpOnly cookie)
 
     Raises:
         HTTPException: If email or username already exists
@@ -57,32 +85,34 @@ async def register(user_data: UserCreate, db: DatabaseSession) -> TokenResponse:
     await db.commit()
     await db.refresh(db_user)
 
-    # Create access token
+    # Create access token and set in HttpOnly cookie
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(db_user.id)}, expires_delta=access_token_expires
     )
+    set_auth_cookie(response, access_token)
 
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.model_validate(db_user),
-    )
+    return UserResponse.model_validate(db_user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=UserResponse)
 async def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DatabaseSession
-) -> TokenResponse:
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response,
+    db: DatabaseSession,
+) -> UserResponse:
     """
     Login with email and password using OAuth2 password flow.
 
+    Sets JWT token in HttpOnly cookie for secure authentication.
+
     Args:
         form_data: OAuth2 form data (username field contains email)
+        response: FastAPI response to set cookie
         db: Database session
 
     Returns:
-        Access token and user information
+        User information (token is set in HttpOnly cookie)
 
     Raises:
         HTTPException: If credentials are invalid
@@ -104,32 +134,33 @@ async def login(
             detail="Inactive user",
         )
 
-    # Create access token
+    # Create access token and set in HttpOnly cookie
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
+    set_auth_cookie(response, access_token)
 
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.model_validate(user),
-    )
+    return UserResponse.model_validate(user)
 
 
-@router.post("/login-json", response_model=TokenResponse)
-async def login_json(user_data: UserLogin, db: DatabaseSession) -> TokenResponse:
+@router.post("/login-json", response_model=UserResponse)
+async def login_json(
+    user_data: UserLogin, response: Response, db: DatabaseSession
+) -> UserResponse:
     """
     Login with email and password using JSON.
 
     Alternative endpoint for clients that prefer JSON over form data.
+    Sets JWT token in HttpOnly cookie for secure authentication.
 
     Args:
         user_data: User login credentials
+        response: FastAPI response to set cookie
         db: Database session
 
     Returns:
-        Access token and user information
+        User information (token is set in HttpOnly cookie)
 
     Raises:
         HTTPException: If credentials are invalid
@@ -150,17 +181,14 @@ async def login_json(user_data: UserLogin, db: DatabaseSession) -> TokenResponse
             detail="Inactive user",
         )
 
-    # Create access token
+    # Create access token and set in HttpOnly cookie
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
+    set_auth_cookie(response, access_token)
 
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.model_validate(user),
-    )
+    return UserResponse.model_validate(user)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -178,19 +206,25 @@ async def get_current_user_info(current_user: CurrentUser) -> UserResponse:
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(current_user: CurrentUser) -> dict[str, str]:
+async def logout(response: Response, current_user: CurrentUser) -> dict[str, str]:
     """
-    Logout current user.
-
-    Note: With JWT tokens, logout is typically handled client-side by removing the token.
-    This endpoint exists for API consistency with the Django version.
+    Logout current user by clearing the HttpOnly authentication cookie.
 
     Args:
+        response: FastAPI response to clear cookie
         current_user: Current authenticated user
 
     Returns:
         Success message
     """
+    # Clear the auth cookie
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
+    )
     return {"message": "Successfully logged out"}
 
 
@@ -226,3 +260,5 @@ async def change_password(
     await db.commit()
 
     return {"message": "Password changed successfully"}
+
+

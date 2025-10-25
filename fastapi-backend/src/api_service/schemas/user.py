@@ -49,8 +49,8 @@ class UserResponse(BaseModel):
     updated_at: datetime
     subscription_status: str
     subscription_tier: str
-    stripe_customer_id: Optional[str] = None
-    stripe_subscription_id: Optional[str] = None
+    # Note: stripe_customer_id and stripe_subscription_id removed for security
+    # These internal IDs should not be exposed to the frontend
     subscription_start_date: Optional[datetime] = None
     subscription_end_date: Optional[datetime] = None
 
