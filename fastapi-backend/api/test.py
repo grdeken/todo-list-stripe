@@ -2,6 +2,7 @@
 from mangum import Mangum
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from src.api_service.core.config import settings
 from src.api_service.api.v1.router import api_router
@@ -13,6 +14,13 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
+)
+
+# Add session middleware (required for OAuth state management)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    max_age=3600,  # Session expires after 1 hour
 )
 
 # Configure CORS
